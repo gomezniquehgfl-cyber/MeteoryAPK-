@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Meteory Optimizer</string>
+    <string name="app_subtitle">Meteory Play</string>
+    <string name="channel_hud">Meteory HUD</string>
+    <string name="channel_monitor">Meteory Monitor</string>
+    <string name="channel_gaming">Meteory Gaming</string>
+    <string name="notification_hud_title">HUD Activo</string>
+    <string name="notification_hud_desc">Superposición de métricas en tiempo real</string>
+    <string name="notification_monitor_title">Monitor del Sistema</string>
+    <string name="notification_monitor_desc">Monitoreando rendimiento del sistema</string>
+    <string name="notification_gaming_title">Modo Gaming Activo</string>
+    <string name="notification_gaming_desc">Recursos optimizados para máximo rendimiento</string>
+</resources>
