@@ -1,193 +1,110 @@
-package com.meteory.optimizer.utils
+plugins {
+    alias(libs.plugins.android.application)
+    alias(libs.plugins.kotlin.android)
+    alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.ksp)
+    alias(libs.plugins.hilt)
+}
 
-import android.content.pm.PackageManager
-import android.util.Log
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-import rikka.shizuku.Shizuku
-import rikka.shizuku.ShizukuRemoteProcess
+android {
+    namespace = "com.meteory.optimizer"
+    compileSdk = 35
 
-object ShizukuUtils {
+    defaultConfig {
+        applicationId = "com.meteory.optimizer"
+        minSdk = 29
+        targetSdk = 35
+        versionCode = 1
+        versionName = "1.0.0"
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
 
-    private const val TAG = "ShizukuUtils"
-    private const val REQUEST_CODE = 1001
-
-    private var remoteProcess: ShizukuRemoteProcess? = null
-
-
-    val isInstalled: Boolean
-        get() = try {
-            Shizuku.pingBinder()
-        } catch (e: Exception) {
-            false
+    buildTypes {
+        release {
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
         }
-
-
-    val isGranted: Boolean
-        get() = try {
-            Shizuku.checkSelfPermission() ==
-                    PackageManager.PERMISSION_GRANTED
-        } catch (e: Exception) {
-            false
-        }
-
-
-    val isAvailable: Boolean
-        get() = isInstalled && isGranted
-
-
-    fun requestPermission(
-        listener: Shizuku.OnRequestPermissionResultListener
-    ) {
-        Shizuku.addRequestPermissionResultListener(listener)
-
-        if (!isGranted) {
-            Shizuku.requestPermission(REQUEST_CODE)
+        debug {
+            applicationIdSuffix = ".debug"
+            isDebuggable = true
         }
     }
 
-
-    private fun createProcess(
-        command: String
-    ): ShizukuRemoteProcess? {
-
-        return try {
-
-            val args = Shizuku.UserServiceArgs(
-                android.content.ComponentName(
-                    "com.meteory.optimizer",
-                    "com.meteory.optimizer.utils.ShizukuShellService"
-                )
-            )
-                .daemon(false)
-                .debuggable(false)
-                .version(1)
-
-
-            Shizuku.bindUserService(
-                args,
-                object : Shizuku.UserServiceConnection {
-
-                    override fun onServiceConnected(
-                        componentName: android.content.ComponentName?,
-                        binder: android.os.IBinder?
-                    ) {
-                        Log.d(
-                            TAG,
-                            "Shizuku service conectado"
-                        )
-                    }
-
-                    override fun onServiceDisconnected(
-                        componentName: android.content.ComponentName?
-                    ) {
-                        Log.d(
-                            TAG,
-                            "Shizuku service desconectado"
-                        )
-                    }
-                }
-            )
-
-            null
-
-        } catch (e: Exception) {
-
-            Log.e(
-                TAG,
-                "Error creando proceso: ${e.message}"
-            )
-
-            null
-        }
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
 
+    kotlinOptions {
+        jvmTarget = "17"
+        freeCompilerArgs += listOf("-opt-in=androidx.compose.material3.ExperimentalMaterial3Api")
+    }
 
+    buildFeatures {
+        compose = true
+        buildConfig = true
+    }
 
-    suspend fun execPrivileged(
-        cmd: String
-    ): ShellUtils.ShellResult =
-        withContext(Dispatchers.IO) {
-
-
-            if (!isAvailable) {
-
-                return@withContext ShellUtils.ShellResult(
-                    "",
-                    "Shizuku no tiene permisos",
-                    -1
-                )
-            }
-
-
-            try {
-
-                /*
-                 * Ejecuta comandos con privilegios Shizuku
-                 * mediante shell del sistema
-                 */
-
-                val process =
-                    Runtime.getRuntime()
-                        .exec(
-                            arrayOf(
-                                "sh",
-                                "-c",
-                                cmd
-                            )
-                        )
-
-
-                val output =
-                    process.inputStream
-                        .bufferedReader()
-                        .readText()
-
-
-                val error =
-                    process.errorStream
-                        .bufferedReader()
-                        .readText()
-
-
-                val exit =
-                    process.waitFor()
-
-
-                ShellUtils.ShellResult(
-                    output.trim(),
-                    error.trim(),
-                    exit
-                )
-
-
-            } catch (e: Exception) {
-
-
-                Log.e(
-                    TAG,
-                    "Error ejecutando comando: ${e.message}"
-                )
-
-
-                ShellUtils.ShellResult(
-                    "",
-                    e.message ?: "Error desconocido",
-                    -1
-                )
-            }
-        }
-
-
-
-    suspend fun execBestEffort(
-        cmd: String
-    ): ShellUtils.ShellResult {
-
-        return if (isAvailable) {
-            execPrivileged(cmd)
-        } else {
-            ShellUtils.execShell(cmd)
+    packaging {
+        resources {
+            excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
     }
+}
+
+dependencies {
+    implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.activity.compose)
+
+    // Compose BOM
+    implementation(platform(libs.androidx.compose.bom))
+    implementation(libs.androidx.compose.ui)
+    implementation(libs.androidx.compose.ui.graphics)
+    implementation(libs.androidx.compose.ui.tooling.preview)
+    implementation(libs.androidx.compose.material3)
+    implementation(libs.androidx.compose.material.icons)
+    implementation(libs.androidx.compose.animation)
+    implementation(libs.androidx.compose.foundation)
+    debugImplementation(libs.androidx.compose.ui.tooling)
+
+    // Navigation
+    implementation(libs.androidx.navigation.compose)
+
+    // Lifecycle
+    implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
+    implementation(libs.androidx.lifecycle.service)
+
+    // Room
+    implementation(libs.androidx.room.runtime)
+    implementation(libs.androidx.room.ktx)
+    ksp(libs.androidx.room.compiler)
+
+    // DataStore
+    implementation(libs.androidx.datastore.preferences)
+
+    // WorkManager
+    implementation(libs.androidx.work.runtime.ktx)
+
+    // Hilt
+    implementation(libs.hilt.android)
+    ksp(libs.hilt.compiler)
+    implementation(libs.hilt.navigation.compose)
+    implementation(libs.hilt.work)
+    ksp(libs.hilt.work.compiler)
+
+    // Coroutines
+    implementation(libs.kotlinx.coroutines.android)
+
+    // Accompanist
+    implementation(libs.accompanist.permissions)
+    implementation(libs.accompanist.systemuicontroller)
+
+    // Shizuku
+    implementation(libs.shizuku.api)
+    implementation(libs.shizuku.provider)
 }
